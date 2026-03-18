@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FloodDB — Presentation Slides</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Poppins:wght@300;400;600;700;800&display=swap');
+
+
+:root {
+  --navy:#0D1B40; --blue:#1E40AF; --teal:#0EA5E9; --cyan:#22D3EE;
+  --light:#EFF6FF; --accent:#F59E0B; --green:#10B981;
+  --purple:#7C3AED; --gray:#64748B; --lgray:#F1F5F9;
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width:100%; height:100%; overflow:hidden;
+  font-family:'Poppins','Sarabun',sans-serif;
+  background:#03090f;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'kern' 1, 'liga' 1;
+}
+
+/* ══════════════════════════════════════════════════════════
+   WAVE CANVAS BACKGROUND
+══════════════════════════════════════════════════════════ */
+#wave-canvas {
+  position:fixed; inset:0; z-index:0;
+  pointer-events:none;
+  width:100%; height:100%;
+}
+
+/* ══════════════════════════════════════════════════════════
+   STAGE — fullscreen centering layer
+══════════════════════════════════════════════════════════ */
+#stage {
+  position:fixed; inset:0; z-index:10;
+  display:flex; align-items:center; justify-content:center;
+  padding:0 20px 72px;   /* bottom padding for nav */
+}
+
+/* ══════════════════════════════════════════════════════════
+   SLIDE BASE
+══════════════════════════════════════════════════════════ */
+.slide {
+  position:absolute;
+  width: min(1020px, 95vw);
+  max-height: calc(100vh - 96px);
+  overflow-y:auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  border-radius:24px;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.08),
+    0 48px 120px rgba(0,0,0,.85),
+    0 0 80px rgba(14,165,233,.08),
+    inset 0 1px 0 rgba(255,255,255,.06);
+  display:none; opacity:0;
+  transform:translateX(80px) scale(.97);
+  transition:
+    opacity .44s cubic-bezier(.4,0,.2,1),
+    transform .44s cubic-bezier(.4,0,.2,1);
+  scrollbar-width:none;
+  backdrop-filter:blur(2px);
+}
+.slide::-webkit-scrollbar { display:none; }
+.slide.active    { display:block; opacity:1; transform:translateX(0) scale(1); }
+.slide.out-left  { display:block; opacity:0; transform:translateX(-80px) scale(.96); pointer-events:none; }
+.slide.out-right { display:block; opacity:0; transform:translateX( 80px) scale(.96); pointer-events:none; }
+
+/* ══════════════════════════════════════════════════════════
+   NAV BAR
+══════════════════════════════════════════════════════════ */
+#nav {
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+  z-index:999; display:flex; align-items:center; gap:14px;
+  background:rgba(8,18,44,.75);
+  border:1px solid rgba(255,255,255,.1);
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  padding:10px 22px; border-radius:40px;
+  box-shadow:0 8px 40px rgba(0,0,0,.5), 0 0 0 1px rgba(14,165,233,.12);
+}
+#nav button {
+  background:none; border:none; color:rgba(255,255,255,.5);
+  font-size:20px; cursor:pointer; padding:2px 8px; border-radius:8px;
+  transition:.2s; line-height:1; user-select:none;
+}
+#nav button:hover  { color:#fff; background:rgba(255,255,255,.1); }
+#nav button:disabled { color:rgba(255,255,255,.18); cursor:default; background:none; }
+#counter {
+  font-size:12px; font-weight:600; color:rgba(255,255,255,.6);
+  min-width:38px; text-align:center; letter-spacing:.06em;
+  font-family:'Poppins',sans-serif;
+}
+
+/* dots */
+#dots { display:flex; gap:6px; align-items:center; }
+.dot {
+  width:6px; height:6px; border-radius:50%;
+  background:rgba(255,255,255,.22); cursor:pointer;
+  transition:all .28s cubic-bezier(.4,0,.2,1);
+}
+.dot:hover { background:rgba(255,255,255,.45); }
+.dot.on    { width:22px; border-radius:4px; background:var(--teal); box-shadow:0 0 8px rgba(14,165,233,.5); }
+
+/* export btn */
+#print-btn {
+  position:fixed; top:18px; right:20px; z-index:999;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15);
+  color:rgba(255,255,255,.8); padding:8px 18px; border-radius:20px;
+  font-size:12px; cursor:pointer; transition:.2s;
+  font-family:'Poppins',sans-serif; letter-spacing:.03em;
+  backdrop-filter:blur(10px);
+}
+#print-btn:hover { background:rgba(255,255,255,.16); color:#fff; }
+
+/* slide number badge */
+.slide-num {
+  position:absolute; top:18px; right:22px;
+  font-size:11px; font-weight:600; letter-spacing:.1em;
+  opacity:.35; color:#fff; text-transform:uppercase;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — MOBILE & TABLET
+══════════════════════════════════════════════════════════ */
+
+/* ── Tablet (≤768px) ──────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Stage & Slide sizing */
+  #stage { padding: 0 8px 68px; }
+  .slide {
+    width: 100%;
+    max-height: calc(100vh - 84px);
+    border-radius: 16px;
+  }
+
+  /* Nav */
+  #nav { padding: 8px 14px; gap: 10px; bottom: 12px; }
+  #nav button { font-size: 17px; padding: 2px 6px; }
+  #counter { font-size: 11px; min-width: 32px; }
+  .dot { width: 5px; height: 5px; }
+  .dot.on { width: 16px; }
+  #print-btn { top: 10px; right: 10px; padding: 6px 12px; font-size: 11px; }
+
+  /* Slide 1 — Cover */
+  .s1 { padding: 36px 28px 80px; min-height: unset; }
+  .s1-title { font-size: clamp(48px, 13vw, 72px); }
+  .s1-title-th { font-size: 14px; }
+  .s1-sub { font-size: 11px; margin-bottom: 20px; }
+  .s1-divider { margin-bottom: 20px; }
+  .s1-tags { gap: 6px; margin-bottom: 24px; }
+  .tag { font-size: 10px; padding: 3px 10px; }
+  .s1-meta { flex-direction: column; gap: 10px; padding-top: 16px; }
+  .s1-meta-item {
+    flex: unset; padding-right: 0; border-right: none;
+    margin-right: 0; padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+  }
+  .s1-meta-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .s1-meta-item label { font-size: 9px; }
+  .s1-meta-item span  { font-size: 12px; }
+  .s1-bar { width: 3px; }
+  .s1-deco { width: 160px; opacity: 0.6; }
+
+  /* Section headers */
+  .sec-hd { margin-bottom: 14px; gap: 8px; }
+  .sec-num { width: 30px; height: 30px; font-size: 12px; border-radius: 8px; }
+  .sec-title { font-size: 16px; }
+
+  /* Slides 2–9 padding */
+  .s2, .s3, .s4, .s5, .s6, .s7, .s8, .s9 {
+    padding: 28px 20px 80px;
+  }
+
+  /* Slide 2 — Problem: 1 col */
+  .problem-grid { grid-template-columns: 1fr; gap: 10px; }
+  .prob-card { padding: 14px 16px; gap: 10px; }
+  .prob-icon { width: 30px; height: 30px; font-size: 14px; border-radius: 8px; }
+  .prob-card h4 { font-size: 12px; }
+  .prob-card p  { font-size: 11px; }
+
+  /* Slide 3 — Objectives */
+  .obj-list { gap: 8px; }
+  .obj-item { padding: 10px 14px; gap: 10px; }
+  .obj-num  { width: 24px; height: 24px; font-size: 11px; border-radius: 6px; }
+  .obj-item p { font-size: 12px; }
+
+  /* Slide 4 — Scope: 1 col */
+  .scope-grid { grid-template-columns: 1fr; gap: 10px; }
+  .scope-col-hd { padding: 10px 14px; font-size: 11px; }
+  .scope-col-body li { font-size: 11px; }
+
+  /* Slide 5 — Benefits: 1 col */
+  .benefit-cards { grid-template-columns: 1fr; gap: 10px; }
+  .ben-card { padding: 14px 16px; }
+  .ben-card .ico { font-size: 20px; margin-bottom: 6px; }
+  .ben-card h4 { font-size: 12px; }
+  .ben-card p  { font-size: 11px; }
+
+  /* Slide 6 — Tech: 2 col */
+  .tech-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tech-card-top  { padding: 8px 10px; font-size: 11px; }
+  .tech-card-body { padding: 8px 10px; font-size: 10px; }
+
+  /* Slide 7 — Method */
+  .phase-dot { width: 32px; height: 32px; font-size: 9px; }
+  .phase-content h4 { font-size: 12px; }
+  .phase-content p  { font-size: 11px; }
+  .phase-label { font-size: 9px; padding: 1px 6px; }
+
+  /* Slide 8 — Results: 2 col */
+  .result-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .res-card { padding: 10px 8px; }
+  .res-card .check { font-size: 15px; }
+  .res-card h5 { font-size: 10px; }
+  .res-card p  { font-size: 9px; }
+  .apk-box { flex-direction: column; gap: 10px; padding: 12px 14px; }
+  .apk-field span { font-size: 10px; }
+  .apk-field .mono { font-size: 8.5px; }
+
+  /* Slide 9 — Lessons: 1 col */
+  .lesson-grid { grid-template-columns: 1fr; gap: 10px; }
+  .lesson-card { padding: 14px 16px; }
+  .lesson-card h4 { font-size: 12px; }
+  .lesson-card p  { font-size: 11px; }
+}
+
+/* ── Small phone (≤480px) ─────────────────────────────── */
+@media (max-width: 480px) {
+  #stage { padding: 0 4px 64px; }
+  .slide { border-radius: 12px; max-height: calc(100vh - 76px); }
+
+  .s1 { padding: 28px 18px 72px; }
+  .s1-title { font-size: clamp(40px, 16vw, 60px); }
+  .s2, .s3, .s4, .s5, .s6, .s7, .s8, .s9 { padding: 22px 14px 72px; }
+
+  /* Tech grid: 1 col on tiny screen */
+  .tech-grid { grid-template-columns: 1fr; }
+
+  /* Result: 2 col stays but smaller */
+  .result-grid { gap: 6px; }
+  .res-card { padding: 8px 6px; }
+
+  /* Nav smaller */
+  #nav { padding: 7px 12px; gap: 8px; bottom: 8px; }
+  #dots .dot:nth-child(n+6) { display: none; } /* hide dots 6-9 on tiny */
+}
+
+/* ── Landscape phone ──────────────────────────────────── */
+@media (max-height: 500px) and (orientation: landscape) {
+  #stage { padding: 0 12px 56px; }
+  .slide { max-height: calc(100vh - 68px); border-radius: 12px; }
+  .s1 { padding: 20px 32px 64px; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 16px; }
+  .s1-title { font-size: clamp(36px, 7vw, 56px); }
+  .s1-tags  { margin-bottom: 0; }
+  .s1-meta  { flex-direction: row; flex-wrap: wrap; gap: 16px; }
+  .s1-meta-item { border-bottom: none; padding-bottom: 0; }
+  .s2, .s3, .s4, .s5, .s6, .s7, .s8, .s9 { padding: 18px 24px 64px; }
+  .sec-hd { margin-bottom: 10px; }
+}
+
+
+  /* print */
+@media print {
+  html,body { overflow:visible; height:auto; background:#fff; }
+  #nav,#print-btn,#wave-canvas { display:none; }
+  #stage { display:block; position:relative; padding:0; height:auto; }
+  .slide {
+    display:block!important; opacity:1!important; transform:none!important;
+    position:relative; max-height:none; page-break-after:always;
+    border-radius:0; box-shadow:none; width:100%; margin:0;
+    backdrop-filter:none;
+  }
+}
+
+/* ─── Slide label ───────────────────────────────────────── */
+  .slide-num {
+    position: absolute; top: 16px; right: 20px;
+    font-size: 11px; font-weight: 600; letter-spacing: .1em;
+    opacity: .4; color: #fff; text-transform: uppercase;
+  }
+
+  /* ─── SLIDE 1 — Cover ───────────────────────────────────── */
+  .s1 {
+    background: transparent;
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 60px 10% 100px;
+    position:relative;
+  }
+  .s1-title {
+    font-size: clamp(60px,8vw,96px); font-weight: 800; color: #fff;
+    line-height: 1; letter-spacing: -.03em; margin-bottom: 6px;
+  }
+  .s1-title .accent { color: var(--teal); }
+  .s1-title-th {
+    font-size: 18px; color: rgba(255,255,255,.65); font-weight: 400;
+    letter-spacing: .02em; margin-bottom: 4px; font-family: 'Sarabun', sans-serif;
+  }
+  .s1-sub {
+    font-size: 13px; color: rgba(255,255,255,.38); font-weight: 300;
+    margin-bottom: 32px; line-height: 1.6; letter-spacing: .01em;
+  }
+  .s1-divider {
+    width: 48px; height: 2px; background: var(--teal);
+    margin-bottom: 32px; border-radius: 2px;
+  }
+  .s1-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 40px; }
+  .tag {
+    padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    letter-spacing: .05em;
+  }
+  .tag-blue  { background:#1E40AF22; color:#60A5FA; border:1px solid #1E40AF44; }
+  .tag-teal  { background:#0EA5E922; color:#38BDF8; border:1px solid #0EA5E944; }
+  .tag-green { background:#10B98122; color:#34D399; border:1px solid #10B98144; }
+  .tag-amber { background:#F59E0B22; color:#FCD34D; border:1px solid #F59E0B44; }
+  .tag-purple{ background:#7C3AED22; color:#A78BFA; border:1px solid #7C3AED44; }
+  .s1-meta { display: flex; gap: 0; border-top: 1px solid rgba(255,255,255,.1); padding-top: 24px; }
+  .s1-meta-item {
+    flex: 1; padding-right: 24px;
+    border-right: 1px solid rgba(255,255,255,.08);
+    margin-right: 24px;
+  }
+  .s1-meta-item:last-child { border-right: none; margin-right: 0; }
+  .s1-meta-item label {
+    font-size: 9px; font-weight: 700; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--teal);
+    display: block; margin-bottom: 5px;
+  }
+  .s1-meta-item span { font-size: 13px; color: rgba(255,255,255,.8); font-weight: 400; }
+  .s1-deco {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 45%;
+    pointer-events: none; overflow: hidden;
+  }
+  .s1-deco svg { width:100%; height:100%; }
+  .s1-bar {
+    position: absolute; left: 0; top: 0; width: 5px; height: 100%;
+    background: linear-gradient(180deg, var(--cyan), var(--teal), var(--blue));
+  }
+
+  /* ─── Section header ────────────────────────────────────── */
+  .sec-hd {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px;
+  }
+  .sec-num {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .sec-title { font-size: 20px; font-weight: 700; }
+  .sec-line { flex: 1; height: 1px; background: rgba(0,0,0,.1); }
+
+  /* ─── SLIDE 2 — Problem ─────────────────────────────────── */
+  .s2 { background: rgba(255,255,255,.96); backdrop-filter:blur(4px); padding: 44px 52px 90px; }
+  .s2 .sec-num  { background: var(--navy); }
+  .s2 .sec-title { color: var(--navy); }
+  .problem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .prob-card {
+    background: var(--lgray); border-radius: 14px;
+    padding: 18px 20px; display: flex; gap: 14px; align-items: flex-start;
+    border-left: 4px solid;
+  }
+  .prob-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .prob-card h4 { font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .prob-card p  { font-size: 12px; color: var(--gray); line-height: 1.5; }
+
+  /* ─── SLIDE 3 — Objectives ──────────────────────────────── */
+  .s3 {
+    background: rgba(13,27,64,.82);
+    backdrop-filter:blur(6px);
+    padding: 44px 52px 90px;
+  }
+  .s3 .sec-num  { background: var(--teal); }
+  .s3 .sec-title { color: #fff; }
+  .s3 .sec-line { background: rgba(255,255,255,.1); }
+  .obj-list { display: flex; flex-direction: column; gap: 10px; }
+  .obj-item {
+    display: flex; gap: 14px; align-items: center;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 14px 18px;
+  }
+  .obj-num {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--teal); display: flex; align-items: center;
+    justify-content: center; font-size: 12px; font-weight: 700;
+    color: #fff; flex-shrink: 0;
+  }
+  .obj-item p { font-size: 13px; color: rgba(255,255,255,.85); line-height: 1.5; }
+
+  /* ─── SLIDE 4 — Scope ──────────────────────────────────── */
+  .s4 { background: rgba(255,255,255,.96); backdrop-filter:blur(4px); padding: 44px 52px 90px; }
+  .s4 .sec-num  { background: var(--blue); }
+  .s4 .sec-title { color: var(--navy); }
+  .scope-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .scope-col { border-radius: 14px; overflow: hidden; }
+  .scope-col-hd {
+    padding: 12px 16px; font-size: 12px; font-weight: 700;
+    color: #fff; letter-spacing: .05em;
+  }
+  .scope-col-body { background: var(--lgray); padding: 12px 16px; }
+  .scope-col-body li {
+    font-size: 11.5px; color: var(--navy); line-height: 1.65;
+    list-style: none; padding: 3px 0;
+    border-bottom: 1px solid rgba(0,0,0,.05);
+    display: flex; align-items: flex-start; gap: 6px;
+  }
+  .scope-col-body li::before { content:'›'; color:var(--teal); font-weight:700; flex-shrink:0; }
+
+  /* ─── SLIDE 5 — Benefits ──────────────────────────────── */
+  .s5 {
+    background: linear-gradient(135deg, rgba(240,253,244,.97) 0%, rgba(239,246,255,.97) 100%);
+    backdrop-filter:blur(4px);
+    padding: 44px 52px 90px;
+  }
+  .s5 .sec-num  { background: var(--green); }
+  .s5 .sec-title { color: var(--navy); }
+  .benefit-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .ben-card {
+    background: #fff; border-radius: 14px; padding: 20px 22px;
+    box-shadow: 0 2px 16px rgba(0,0,0,.06);
+    border-top: 3px solid;
+  }
+  .ben-card .ico { font-size: 26px; margin-bottom: 10px; }
+  .ben-card h4 { font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .ben-card p  { font-size: 12px; color: var(--gray); line-height: 1.5; }
+
+  /* ─── SLIDE 6 — Tech ──────────────────────────────────── */
+  .s6 { background: rgba(13,27,64,.85); backdrop-filter:blur(6px); padding: 44px 52px 90px; }
+  .s6 .sec-num  { background: var(--purple); }
+  .s6 .sec-title { color: #fff; }
+  .s6 .sec-line { background: rgba(255,255,255,.1); }
+  .tech-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  .tech-card {
+    border-radius: 12px; overflow: hidden;
+  }
+  .tech-card-top {
+    padding: 10px 14px; font-size: 13px; font-weight: 700;
+    color: #fff;
+  }
+  .tech-card-body {
+    background: rgba(255,255,255,.06); padding: 10px 14px;
+    font-size: 11px; color: rgba(255,255,255,.6); line-height: 1.6;
+  }
+
+  /* ─── SLIDE 7 — Method ─────────────────────────────────── */
+  .s7 { background: rgba(255,255,255,.96); backdrop-filter:blur(4px); padding: 44px 52px 90px; }
+  .s7 .sec-num  { background: var(--accent); }
+  .s7 .sec-title { color: var(--navy); }
+  .phase-timeline { display: flex; flex-direction: column; gap: 0; }
+  .phase-item {
+    display: flex; gap: 0; position: relative;
+  }
+  .phase-item:not(:last-child)::before {
+    content:''; position: absolute; left: 19px; top: 38px;
+    width: 2px; height: calc(100% - 10px);
+    background: var(--lgray);
+  }
+  .phase-dot {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff;
+    flex-shrink: 0; margin-right: 16px; margin-top: 2px;
+    position: relative; z-index: 1;
+  }
+  .phase-content { flex: 1; padding-bottom: 16px; }
+  .phase-content h4 { font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 3px; }
+  .phase-content p  { font-size: 11.5px; color: var(--gray); line-height: 1.5; }
+  .phase-label {
+    font-size: 10px; font-weight: 600; color: #fff;
+    padding: 2px 8px; border-radius: 8px; display: inline-flex;
+    margin-bottom: 4px;
+  }
+
+  /* ─── SLIDE 8 — Results ────────────────────────────────── */
+  .s8 {
+    background: rgba(13,27,64,.82);
+    backdrop-filter:blur(6px);
+    padding: 44px 52px 90px;
+  }
+  .s8 .sec-num  { background: var(--green); }
+  .s8 .sec-title { color: #fff; }
+  .s8 .sec-line { background: rgba(255,255,255,.1); }
+  .result-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 20px; }
+  .res-card {
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 14px 12px; text-align: center;
+  }
+  .res-card .check { font-size: 18px; margin-bottom: 6px; }
+  .res-card h5 { font-size: 11px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+  .res-card p  { font-size: 10px; color: rgba(255,255,255,.5); line-height: 1.4; }
+  .apk-box {
+    background: rgba(255,255,255,.07);
+    border: 1px solid rgba(255,255,255,.15);
+    border-left: 4px solid var(--teal);
+    border-radius: 12px; padding: 16px 20px;
+    display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+  }
+  .apk-field label {
+    font-size: 9px; font-weight: 600; letter-spacing: .1em;
+    text-transform: uppercase; color: rgba(255,255,255,.35);
+    display: block; margin-bottom: 2px;
+  }
+  .apk-field span { font-size: 11px; color: rgba(255,255,255,.75); }
+  .apk-field .mono { font-family: 'Courier New', monospace; font-size: 9.5px; color: var(--cyan); word-break: break-all; }
+
+  /* ─── SLIDE 9 — Lessons ─────────────────────────────────── */
+  .s9 { background: rgba(255,255,255,.96); backdrop-filter:blur(4px); padding: 44px 52px 90px; }
+  .s9 .sec-num  { background: var(--navy); }
+  .s9 .sec-title { color: var(--navy); }
+  .lesson-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .lesson-card {
+    border-radius: 14px; padding: 20px 22px;
+    position: relative; overflow: hidden;
+  }
+  .lesson-card::before {
+    content: attr(data-num);
+    position: absolute; right: 16px; bottom: 8px;
+    font-size: 60px; font-weight: 800; opacity: .07;
+    font-family: 'Poppins', sans-serif;
+    line-height: 1;
+  }
+  .lesson-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .lesson-card p  { font-size: 12px; line-height: 1.55; position: relative; z-index:1; }
+
+  /* ─── Footer strip ─────────────────────────────────────── */
+  .footer-strip {
+    color: rgba(255,255,255,.3); font-size: 11px;
+    text-align: center; margin-top: 12px;
+  }
+
+  /* Print / export */
+  @media print {
+    body { background: #fff; padding: 0; gap: 0; }
+    .controls { display: none; }
+    .slide { box-shadow: none; border-radius: 0; page-break-after: always; width: 100%; }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- ══ Animated Wave Background ══════════════════════════ -->
+<canvas id="wave-canvas"></canvas>
+
+<!-- ══ Slides Stage ═══════════════════════════════════════ -->
+<div id="stage">
+<div id="slide-1" class="slide s1">
+  <div class="s1-bar"></div>
+  <div class="s1-deco">
+    <svg viewBox="0 0 320 460" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="260" cy="50"  r="140" fill="rgba(14,165,233,.05)"/>
+      <circle cx="200" cy="220" r="90"  fill="rgba(30,64,175,.07)"/>
+      <circle cx="290" cy="370" r="110" fill="rgba(14,165,233,.04)"/>
+      <circle cx="130" cy="420" r="70"  fill="rgba(124,58,237,.05)"/>
+      <circle cx="310" cy="180" r="50"  fill="rgba(34,211,238,.06)"/>
+    </svg>
+  </div>
+  <span class="slide-num">01 / 09</span>
+
+  <div class="s1-title">Flood<span class="accent">DB</span></div>
+  <div class="s1-title-th">ระบบจัดการข้อมูลความเสียหายน้ำท่วม</div>
+  <div class="s1-sub">Flood Damage Information Management System</div>
+  <div class="s1-divider"></div>
+  <div class="s1-tags">
+    <span class="tag tag-blue">Ionic + Angular</span>
+    <span class="tag tag-teal">Capacitor Android</span>
+    <span class="tag tag-green">PHP + MySQL</span>
+    <span class="tag tag-amber">Docker Compose</span>
+    <span class="tag tag-purple">Full Stack</span>
+  </div>
+  <div class="s1-meta">
+    <div class="s1-meta-item">
+      <label>รหัสนักศึกษา</label>
+      <span>168204140030 / 168204140036</span>
+    </div>
+    <div class="s1-meta-item">
+      <label>ผู้พัฒนา</label>
+      <span style="line-height:1.9; font-size:12px">Watcharapong Khunnuy<br>Warintorn Sangcharoon</span>
+    </div>
+    <div class="s1-meta-item">
+      <label>เวอร์ชันล่าสุด</label>
+      <span>v22 — มีนาคม 2026</span>
+    </div>
+    <div class="s1-meta-item">
+      <label>สถานะ</label>
+      <span style="color:#34D399; font-weight:600">● ใช้งานได้จริง</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SLIDE 2 — PROBLEM -->
+<div id="slide-2" class="slide s2">
+  <span class="slide-num">02 / 09</span>
+  <div class="sec-hd">
+    <div class="sec-num">2</div>
+    <h2 class="sec-title">เหตุผลความจำเป็น</h2>
+    <div class="sec-line"></div>
+  </div>
+  <div class="problem-grid">
+    <div class="prob-card" style="border-color:#0EA5E9">
+      <div class="prob-icon" style="background:#EFF6FF">💾</div>
+      <div>
+        <h4>ข้อมูลกระจัดกระจาย</h4>
+        <p>บันทึกในกระดาษ, ไฟล์แยก, แชต ทำให้รวบรวมยากและเสี่ยงตกหล่น</p>
+      </div>
+    </div>
+    <div class="prob-card" style="border-color:#7C3AED">
+      <div class="prob-icon" style="background:#F5F3FF">📊</div>
+      <div>
+        <h4>ติดตามสถานะได้ยาก</h4>
+        <p>ไม่รู้ว่าเคสไหนอยู่ขั้นตอนใด อนุมัติแล้วหรือยัง ใครรับผิดชอบ</p>
+      </div>
+    </div>
+    <div class="prob-card" style="border-color:#F59E0B">
+      <div class="prob-icon" style="background:#FFFBEB">🔁</div>
+      <div>
+        <h4>ข้อมูลซ้ำซ้อน / สูญหาย</h4>
+        <p>ขาดมาตรฐานกลาง เกิดข้อมูลซ้ำซ้อนและไม่สามารถตรวจย้อนหลังได้</p>
+      </div>
+    </div>
+    <div class="prob-card" style="border-color:#10B981">
+      <div class="prob-icon" style="background:#F0FDF4">📱</div>
+      <div>
+        <h4>ภาคสนามต้องการมือถือ</h4>
+        <p>เจ้าหน้าที่ต้องบันทึกข้อมูลทันทีที่หน้างาน ต้องการแอปมือถือที่เสถียร</p>
+      </div>
+    </div>
+    <div class="prob-card" style="border-color:#1E40AF" style="grid-column:1/-1">
+      <div class="prob-icon" style="background:#EFF6FF">🌊</div>
+      <div>
+        <h4>น้ำท่วมซ้ำซาก — ต้องการข้อมูลที่จัดการได้</h4>
+        <p>ประเทศไทยเผชิญน้ำท่วมหลายจังหวัดเป็นประจำ การจัดการข้อมูลหลังเกิดเหตุต้องรวดเร็วและแม่นยำ</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SLIDE 3 — OBJECTIVES -->
+<div id="slide-3" class="slide s3">
+  <span class="slide-num" style="color:rgba(255,255,255,.4)">03 / 09</span>
+  <div class="sec-hd">
+    <div class="sec-num">3</div>
+    <h2 class="sec-title">วัตถุประสงค์</h2>
+    <div class="sec-line"></div>
+  </div>
+  <div class="obj-list">
+    <div class="obj-item">
+      <div class="obj-num">1</div>
+      <p>พัฒนาระบบจัดการข้อมูลความเสียหายน้ำท่วมแบบ <strong>Full Stack</strong> ที่ใช้งานได้จริงบนเครื่องจริง</p>
+    </div>
+    <div class="obj-item">
+      <div class="obj-num">2</div>
+      <p>รองรับการใช้งานผ่าน <strong>เว็บและแอป Android</strong> จากฐานโค้ดเดียวกันด้วย Ionic + Capacitor</p>
+    </div>
+    <div class="obj-item">
+      <div class="obj-num">3</div>
+      <p>พัฒนาระบบ <strong>ยืนยันตัวตนและจัดการสิทธิ์</strong> ผู้ใช้ในระดับพื้นฐาน (JWT httpOnly Cookie)</p>
+    </div>
+    <div class="obj-item">
+      <div class="obj-num">4</div>
+      <p>แสดง <strong>แดชบอร์ดและรายงาน</strong> ข้อมูลให้เข้าใจง่าย ตรวจสอบสถานะย้อนหลังได้</p>
+    </div>
+    <div class="obj-item">
+      <div class="obj-num">5</div>
+      <p>ศึกษาและแก้ปัญหาเชิงเทคนิคจริงบน <strong>Android WebView</strong> แบบเป็นระบบและบันทึกกรณีศึกษา</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SLIDE 4 — SCOPE -->
+<div id="slide-4" class="slide s4">
+  <span class="slide-num">04 / 09</span>
+  <div class="sec-hd">
+    <div class="sec-num" style="background:var(--blue)">4</div>
+    <h2 class="sec-title">ขอบเขต</h2>
+    <div class="sec-line"></div>
+  </div>
+  <div class="scope-grid">
+    <div class="scope-col">
+      <div class="scope-col-hd" style="background:var(--blue)">ด้านฟังก์ชัน</div>
+      <div class="scope-col-body">
+        <ul>
+          <li>สมัครสมาชิก / เข้าสู่ระบบ</li>
+          <li>แดชบอร์ดสรุปภาพรวม</li>
+          <li>รายการรายงานความเสียหาย</li>
+          <li>รายละเอียดรายงานรายเคส</li>
+          <li>จัดการโปรไฟล์ผู้ใช้</li>
+          <li>ออกจากระบบอย่างเสถียร</li>
+        </ul>
+      </div>
+    </div>
+    <div class="scope-col">
+      <div class="scope-col-hd" style="background:var(--teal)">ด้านเทคโนโลยี</div>
+      <div class="scope-col-body">
+        <ul>
+          <li>Frontend: Ionic + Angular</li>
+          <li>Mobile: Capacitor (Android)</li>
+          <li>Backend: PHP REST API</li>
+          <li>Database: MySQL 8.0</li>
+          <li>Container: Docker Compose</li>
+          <li>Test Device: Xiaomi Android 16</li>
+        </ul>
+      </div>
+    </div>
+    <div class="scope-col">
+      <div class="scope-col-hd" style="background:var(--purple)">ด้านเวลา / เวอร์ชัน</div>
+      <div class="scope-col-body">
+        <ul>
+          <li>v1–v8: วางโครงพื้นฐาน</li>
+          <li>v9–v16: แก้ CORS / Auth</li>
+          <li>v17–v22: แก้ Rendering</li>
+          <li>รวม 22 เวอร์ชัน</li>
+          <li>ทดสอบบนอุปกรณ์จริงทุกรอบ</li>
+          <li>มีนาคม 2026</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SLIDE 5 — BENEFITS -->
+<div id="slide-5" class="slide s5">
+  <span class="slide-num">05 / 09</span>
+  <div class="sec-hd">
+    <div class="sec-num" style="background:var(--green)">5</div>
+    <h2 class="sec-title" style="color:var(--navy)">ประโยชน์ที่คาดว่าจะได้รับ</h2>
+    <div class="sec-line"></div>
+  </div>
+  <div class="benefit-cards">
+    <div class="ben-card" style="border-color:var(--teal)">
+      <div class="ico">🏢</div>
+      <h4>ด้านองค์กร</h4>
+      <p>มีฐานข้อมูลกลางที่ลดปัญหาข้อมูลกระจัดกระจาย ตรวจสอบย้อนหลังได้ทุกรายการ</p>
+    </div>
+    <div class="ben-card" style="border-color:var(--blue)">
+      <div class="ico">📱</div>
+      <h4>ด้านผู้ใช้ภาคสนาม</h4>
+      <p>ส่งข้อมูลผ่านมือถือได้ทันที ไม่ต้องรอกลับสำนักงาน ลดเวลาและความผิดพลาด</p>
+    </div>
+    <div class="ben-card" style="border-color:var(--purple)">
+      <div class="ico">👥</div>
+      <h4>ด้านทีมงาน</h4>
+      <p>ติดตามสถานะรายงานแต่ละเคสได้ชัดเจน ประสานงานและสรุปผลได้รวดเร็วขึ้น</p>
+    </div>
+    <div class="ben-card" style="border-color:var(--accent)">
+      <div class="ico">🎓</div>
+      <h4>ด้านวิชาการ</h4>
+      <p>ได้องค์ความรู้เชิงลึกด้าน Android WebView debugging ที่นำไปต่อยอดโครงการอื่นได้</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SLIDE 6 — TECH -->
+<div id="slide-6" class="slide s6">
+  <span class="slide-num" style="color:rgba(255,255,255,.4)">06 / 09</span>
+  <div class="sec-hd">
+    <div class="sec-num">6</div>
+    <h2 class="sec-title">ความรู้ที่เกี่ยวข้อง</h2>
+    <div class="sec-line"></div>
+  </div>
+  <div class="tech-grid">
+    <div class="tech-card">
+      <div class="tech-card-top" style="background:#1E40AF">⚡ Angular 20</div>
+      <div class="tech-card-body">Component-based SPA framework, Reactive Forms, Route Guards, HTTP Interceptors, Standalone Components</div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-card-top" style="background:#0EA5E9">📱 Ionic 8</div>
+      <div class="tech-card-body">Mobile UI components, ion-router-outlet lifecycle, ion-tabs, StatusBar API, Native gesture handling</div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-card-top" style="background:#0891B2">🔌 Capacitor 7</div>
+      <div class="tech-card-body">Web → Android APK bridge, Native Plugin API, WebView configuration, Hardware Back Button, cleartext traffic</div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-card-top" style="background:#7C3AED">🗄 PHP + MySQL</div>
+      <div class="tech-card-body">REST API endpoints, JWT cookie-auth, CORS middleware, Prepared Statements, Docker Compose deployment</div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-card-top" style="background:#D97706">🤖 Android WebView</div>
+      <div class="tech-card-body">ion-page-invisible bug, Hybrid routing behavior, Touch event propagation, Native scroll container pattern</div>
+    </div>
+    <div class="tech-card">
+      <div class="tech-card-top" style="background:#059669">🔒 CORS & Security</div>
+      <div class="tech-card-body">Preflight OPTIONS handling, .htaccess CORS override debugging, httpOnly cookie vs Bearer token fallback</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SLIDE 7 — METHOD -->
+<div id="slide-7" class="slide s7">
+  <span class="slide-num">07 / 09</span>
+  <div class="sec-hd">
+    <div class="sec-num" style="background:var(--accent)">7</div>
+    <h2 class="sec-title">วิธีการดำเนินงาน</h2>
+    <div class="sec-line"></div>
+  </div>
+  <div class="phase-timeline">
+    <div class="phase-item">
+      <div class="phase-dot" style="background:#1E40AF">A</div>
+      <div class="phase-content">
+        <span class="phase-label" style="background:#1E40AF">Phase A</span>
+        <h4>CORS + Auth พื้นฐาน</h4>
+        <p>ปรับ CORS middleware และ .htaccess ให้ตอบ preflight ถูกต้อง, ย้าย JWT ไป httpOnly cookie, แก้ Authorization header ซ้ำ</p>
+      </div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-dot" style="background:#0EA5E9">B</div>
+      <div class="phase-content">
+        <span class="phase-label" style="background:#0EA5E9">Phase B</span>
+        <h4>Mobile Connectivity</h4>
+        <p>เปลี่ยน LAN IP เป็น 192.168.0.22, เปิด cleartext traffic, androidScheme configuration</p>
+      </div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-dot" style="background:#7C3AED">C</div>
+      <div class="phase-content">
+        <span class="phase-label" style="background:#7C3AED">Phase C</span>
+        <h4>แก้ Black/White Screen</h4>
+        <p>Emergency fallback shell, forceUnhideStuckIonPages(), ปลด ion-page-invisible ทั้ง JS และ CSS</p>
+      </div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-dot" style="background:#D97706">D</div>
+      <div class="phase-content">
+        <span class="phase-label" style="background:#D97706">Phase D</span>
+        <h4>Full Flow Restore + UI Parity</h4>
+        <p>Dashboard/List/Detail/Profile เสถียร, Logout hard redirect, Safe mode UI ใกล้เคียงเว็บ</p>
+      </div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-dot" style="background:#059669">v22</div>
+      <div class="phase-content">
+        <span class="phase-label" style="background:#059669">v9–v22</span>
+        <h4>Dashboard Lock + Scroll Fix</h4>
+        <p>แก้ interaction lock ด้วย page-local guard, แก้ scroll ด้วย native inner scroll container ใน div.dashboard-scroll</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SLIDE 8 — RESULTS -->
+<div id="slide-8" class="slide s8">
+  <span class="slide-num" style="color:rgba(255,255,255,.4)">08 / 09</span>
+  <div class="sec-hd">
+    <div class="sec-num">8</div>
+    <h2 class="sec-title">ผลการทดลอง</h2>
+    <div class="sec-line"></div>
+  </div>
+  <div class="result-grid">
+    <div class="res-card">
+      <div class="check" style="color:#34D399">✓</div>
+      <h5>Login / Register</h5>
+      <p>เข้าออกระบบได้ปกติ</p>
+    </div>
+    <div class="res-card">
+      <div class="check" style="color:#60A5FA">✓</div>
+      <h5>Dashboard</h5>
+      <p>แสดงข้อมูลจริงจาก API</p>
+    </div>
+    <div class="res-card">
+      <div class="check" style="color:#A78BFA">✓</div>
+      <h5>Damage List</h5>
+      <p>โหลดและแสดงผลได้</p>
+    </div>
+    <div class="res-card">
+      <div class="check" style="color:#38BDF8">✓</div>
+      <h5>Damage Detail</h5>
+      <p>เปิดและ interact ได้</p>
+    </div>
+    <div class="res-card">
+      <div class="check" style="color:#FCD34D">✓</div>
+      <h5>Profile Edit</h5>
+      <p>ดูและแก้ไขข้อมูล</p>
+    </div>
+    <div class="res-card">
+      <div class="check" style="color:#34D399">✓</div>
+      <h5>Hardware Back</h5>
+      <p>ทุกหน้าทำงานได้</p>
+    </div>
+    <div class="res-card">
+      <div class="check" style="color:#60A5FA">✓</div>
+      <h5>Dashboard Scroll</h5>
+      <p>เลื่อนได้ใน v22</p>
+    </div>
+    <div class="res-card">
+      <div class="check" style="color:#A78BFA">✓</div>
+      <h5>Logout</h5>
+      <p>กลับ login เสถียร</p>
+    </div>
+  </div>
+  <div class="apk-box">
+    <div class="apk-field">
+      <label>APK File</label>
+      <span>FloodDB-diagnostic-debug-v22.apk</span>
+    </div>
+    <div class="apk-field" style="flex:1">
+      <label>SHA256</label>
+      <span class="mono">8AE130CAA269C1725993738016990B61E7DFE0A46B40278035965E65C56B3878</span>
+    </div>
+    <div class="apk-field">
+      <label>Size / Device</label>
+      <span>~17.13 MB · Xiaomi Android 16</span>
+    </div>
+    <div class="apk-field">
+      <label>สถานะ</label>
+      <span style="color:#34D399; font-weight:700">● STABLE</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ SLIDE 9 — LESSONS -->
+<div id="slide-9" class="slide s9">
+  <span class="slide-num">09 / 09</span>
+  <div class="sec-hd">
+    <div class="sec-num">9</div>
+    <h2 class="sec-title">บทเรียนและข้อเสนอแนะ</h2>
+    <div class="sec-line"></div>
+  </div>
+  <div class="lesson-grid">
+    <div class="lesson-card" data-num="1" style="background:#EFF6FF">
+      <h4 style="color:var(--blue)">🔬 แยกปัญหาเป็นชั้น</h4>
+      <p style="color:var(--gray)">Network → Auth → Render → UX การแก้ทีละชั้นพร้อมวัดผลป้องกัน regression และหา root cause ได้เร็วขึ้น</p>
+    </div>
+    <div class="lesson-card" data-num="2" style="background:#F0FDF4">
+      <h4 style="color:var(--green)">📱 ทดสอบบนเครื่องจริงเสมอ</h4>
+      <p style="color:var(--gray)">Android WebView มีพฤติกรรมต่างจาก emulator ปัญหาหลายอย่างไม่ปรากฏบนเดสก์ท็อป</p>
+    </div>
+    <div class="lesson-card" data-num="3" style="background:#FFF7ED">
+      <h4 style="color:var(--accent)">📋 เอกสารที่ดีประหยัดเวลา</h4>
+      <p style="color:var(--gray)">บันทึก SHA256, session log, และ heartbeat ทุกรอบ ทำให้กลับมาทำต่อได้เร็วแม้เปลี่ยนเซสชัน</p>
+    </div>
+    <div class="lesson-card" data-num="4" style="background:#F5F3FF">
+      <h4 style="color:var(--purple)">🛡 Page-local > Global override</h4>
+      <p style="color:var(--gray)">การแก้เฉพาะบริบท (page-local guard) ลด side effect ดีกว่าการ override global ที่ส่งผลทั่วแอป</p>
+    </div>
+  </div>
+
+  <div style="margin-top:20px; background:var(--navy); border-radius:14px; padding:18px 22px; display:flex; justify-content:space-between; align-items:center;">
+    <div>
+      <div style="font-size:11px; color:rgba(255,255,255,.4); letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px">งานต่อยอดแนะนำ</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <span class="tag tag-teal">Automated Tests</span>
+        <span class="tag tag-blue">UI Consistency</span>
+        <span class="tag tag-purple">Production Deploy</span>
+        <span class="tag tag-amber">Monitoring</span>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:10px; color:rgba(255,255,255,.35); margin-bottom:4px">Repository</div>
+      <div style="font-size:11px; color:var(--cyan)">github.com/WatcharapongKhunnuy/<br>flood_db-flood_app_cors_fixed</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ Nav ════════════════════════════════════════════════ -->
+<div id="nav">
+  <button id="btn-prev" onclick="goTo(cur-1)" title="ก่อนหน้า (←)">&#8592;</button>
+  <div id="dots"></div>
+  <button id="btn-next" onclick="goTo(cur+1)" title="ถัดไป (→)">&#8594;</button>
+  <span id="counter">1 / 9</span>
+</div>
+
+<button id="print-btn" onclick="window.print()">🖨 Export PDF</button>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   ANIMATED WAVE BACKGROUND
+══════════════════════════════════════════════════════════ */
+(function() {
+  const canvas = document.getElementById('wave-canvas');
+  const ctx    = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // ── Wave config ────────────────────────────────────────────────
+  // t วิ่งตาม clock จริง (ms) → หารด้วยตัวหาร speed เองใน drawWave
+  // spd = วินาทีต่อ 1 รอบคลื่น (ยิ่งมากยิ่งช้า) เฉลี่ย ~14-22 วิ
+  const waves = [
+    { amp:44, freq:0.0010, spd:18000, phase:0.00, yBase:0.48, alpha:0.07, color:'#0EA5E9' },
+    { amp:32, freq:0.0016, spd:22000, phase:1.30, yBase:0.56, alpha:0.055,color:'#22D3EE' },
+    { amp:58, freq:0.0007, spd:26000, phase:2.60, yBase:0.63, alpha:0.042,color:'#1E40AF' },
+    { amp:26, freq:0.0020, spd:16000, phase:3.90, yBase:0.41, alpha:0.045,color:'#0EA5E9' },
+    { amp:72, freq:0.0005, spd:32000, phase:0.80, yBase:0.72, alpha:0.030,color:'#7C3AED' },
+    { amp:18, freq:0.0026, spd:14000, phase:5.10, yBase:0.33, alpha:0.032,color:'#22D3EE' },
+  ];
+
+  // ── Orb config ─────────────────────────────────────────────────
+  const orbs = [
+    { x:0.78, y:0.20, r:340, color:'#0EA5E9', alpha:0.036 },
+    { x:0.16, y:0.65, r:220, color:'#7C3AED', alpha:0.030 },
+    { x:0.88, y:0.80, r:270, color:'#22D3EE', alpha:0.024 },
+    { x:0.06, y:0.15, r:200, color:'#1E40AF', alpha:0.038 },
+  ];
+
+  // ── Draw helpers ───────────────────────────────────────────────
+  function hex2(v) { return Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0'); }
+
+  function drawWave(wave, t) {
+    const W = canvas.width, H = canvas.height;
+    const yC = H * wave.yBase;
+    // offset เพิ่มขึ้นตาม real-time → คลื่นเดินซ้ายไปขวา
+    const offset = (t / wave.spd) * Math.PI * 2;
+
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for (let x = 0; x <= W + 4; x += 3) {
+      const y = yC
+        + Math.sin(x * wave.freq + offset            + wave.phase) * wave.amp
+        + Math.sin(x * wave.freq * 2.3 + offset*0.6 + wave.phase*1.4) * (wave.amp * 0.25)
+        + Math.sin(x * wave.freq * 0.4 + offset*0.35+ wave.phase*0.5) * (wave.amp * 0.15);
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(W, H);
+    ctx.closePath();
+
+    const grad = ctx.createLinearGradient(0, yC - wave.amp * 1.4, 0, yC + wave.amp * 2.8);
+    grad.addColorStop(0,    wave.color + hex2(wave.alpha * 255));
+    grad.addColorStop(0.55, wave.color + hex2(wave.alpha * 0.35 * 255));
+    grad.addColorStop(1,    wave.color + '00');
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+
+  function drawOrbs(t) {
+    const W = canvas.width, H = canvas.height;
+    orbs.forEach((orb, i) => {
+      const driftX = Math.sin(t * 0.000028 + i * 1.7) * 38;
+      const driftY = Math.cos(t * 0.000022 + i * 1.2) * 28;
+      const cx = W * orb.x + driftX;
+      const cy = H * orb.y + driftY;
+      const r  = orb.r * (1 + Math.sin(t * 0.000035 + i * 0.9) * 0.07);
+      const g  = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      g.addColorStop(0,   orb.color + hex2(orb.alpha * 255));
+      g.addColorStop(0.45,orb.color + hex2(orb.alpha * 0.28 * 255));
+      g.addColorStop(1,   orb.color + '00');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  // ── Render loop ────────────────────────────────────────────────
+  let startT = null;
+  function frame(ts) {
+    if (!startT) startT = ts;
+    const t = ts - startT;   // ms ตั้งแต่เริ่ม — monotonic, smooth
+    const W = canvas.width, H = canvas.height;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // background
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0,   '#020810');
+    bg.addColorStop(0.45,'#03090f');
+    bg.addColorStop(1,   '#040d18');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+
+    drawOrbs(t);
+    [...waves].reverse().forEach(w => drawWave(w, t));
+
+    // grid
+    ctx.strokeStyle = 'rgba(14,165,233,0.022)';
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x < W; x += 64) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for (let y = 0; y < H; y += 64) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+/* ══════════════════════════════════════════════════════════
+   SLIDESHOW ROUTER
+══════════════════════════════════════════════════════════ */
+const TOTAL = 9;
+let cur = 1, animating = false;
+
+// Build dots
+const dotsEl = document.getElementById('dots');
+for (let i = 1; i <= TOTAL; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 1 ? ' on' : '');
+  d.onclick = () => goTo(i);
+  d.title = 'Slide ' + i;
+  dotsEl.appendChild(d);
+}
+
+function slide(n) { return document.getElementById('slide-' + n); }
+
+function goTo(n) {
+  if (animating || n < 1 || n > TOTAL || n === cur) return;
+  animating = true;
+
+  const dir    = n > cur ? 1 : -1;
+  const prev   = cur;
+  cur = n;
+
+  const outClass = dir > 0 ? 'out-left'  : 'out-right';
+  const inClass  = dir > 0 ? 'out-right' : 'out-left';
+
+  const inEl = slide(cur);
+  inEl.classList.remove('active','out-left','out-right');
+  inEl.classList.add(inClass);
+  inEl.style.display = 'block';
+  inEl.offsetHeight; // reflow
+
+  slide(prev).classList.remove('active');
+  slide(prev).classList.add(outClass);
+  inEl.classList.remove(inClass);
+  inEl.classList.add('active');
+  inEl.scrollTop = 0;
+
+  setTimeout(() => {
+    slide(prev).style.display = 'none';
+    slide(prev).classList.remove(outClass);
+    updateUI();
+    animating = false;
+  }, 460);
+}
+
+function updateUI() {
+  document.getElementById('counter').textContent = cur + ' / ' + TOTAL;
+  document.getElementById('btn-prev').disabled = cur === 1;
+  document.getElementById('btn-next').disabled = cur === TOTAL;
+  document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('on', i+1 === cur));
+}
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (['ArrowRight','ArrowDown',' '].includes(e.key)) { e.preventDefault(); goTo(cur+1); }
+  if (['ArrowLeft','ArrowUp'].includes(e.key))        { e.preventDefault(); goTo(cur-1); }
+  if (e.key==='Home') goTo(1);
+  if (e.key==='End')  goTo(TOTAL);
+});
+
+// Touch swipe
+let tx = 0;
+document.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, {passive:true});
+document.addEventListener('touchend',   e => {
+  const dx = e.changedTouches[0].clientX - tx;
+  if (Math.abs(dx) > 50) goTo(dx < 0 ? cur+1 : cur-1);
+}, {passive:true});
+
+// Init
+(function() {
+  for (let i = 1; i <= TOTAL; i++) {
+    const el = slide(i);
+    el.style.display = 'none';
+    el.classList.remove('active','out-left','out-right');
+  }
+  slide(1).style.display = 'block';
+  slide(1).classList.add('active');
+  updateUI();
+})();
+</script>
+</body>
+</html>

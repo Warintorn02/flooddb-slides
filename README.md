@@ -3,7 +3,7 @@
 ระบบจัดการข้อมูลความเสียหายน้ำท่วม  
 Flood Damage Information Management System
 
-**Live:** https://WatcharapongKhunnuy.github.io/flooddb-slides
+**Live:** https://Warintorn02.github.io/flooddb-slides
 
 ## วิธีดู
 เปิดลิงก์ด้านบนได้เลย ไม่ต้องติดตั้งอะไร

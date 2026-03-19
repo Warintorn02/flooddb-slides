@@ -164,7 +164,7 @@ html, body {
   }
   .s1-meta-item:last-child { border-bottom: none; padding-bottom: 0; }
   .s1-meta-item label { font-size: 9px; }
-  .s1-meta-item span  { font-size: 12px; }
+  .s1-meta-item span  { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block; }
   .s1-bar { width: 3px; }
   .s1-deco { width: 160px; opacity: 0.6; }
 
@@ -584,11 +584,11 @@ html, body {
   <div class="s1-meta">
     <div class="s1-meta-item">
       <label>รหัสนักศึกษา</label>
-      <span>168204140030 / 168204140036</span>
+      <span style="white-space:nowrap">168204140030 / 168204140036</span>
     </div>
     <div class="s1-meta-item">
       <label>ผู้พัฒนา</label>
-      <span style="line-height:1.9; font-size:12px">Watcharapong Khunnuy<br>Warintorn Sangcharoon</span>
+      <span style="font-size:12px; white-space:nowrap">Watcharapong Khunnuy, Warintorn Sangcharoon</span>
     </div>
     <div class="s1-meta-item">
       <label>เวอร์ชันล่าสุด</label>
